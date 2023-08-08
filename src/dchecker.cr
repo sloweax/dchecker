@@ -1,14 +1,43 @@
 require "./whoisclient"
 require "./domain"
 require "./whoisservers"
+require "option_parser"
 require "colorize"
 
 module DChecker
   VERSION = "0.1.1"
 
-  FIN = STDIN
+  timeout = 5.0
+  fin = STDIN
+  interval = 0.5
   FOUT = STDOUT
   OUT_TTY = FOUT.tty?
+
+  OptionParser.parse do |parser|
+    parser.banner = "usage: #{PROGRAM_NAME} [options]"
+
+    parser.on("-h", "--help", "usage helper") {
+      puts parser
+      exit
+    }
+
+    parser.on("-v", "--version", "shows program version") {
+      puts VERSION
+      exit
+    }
+
+    parser.on("-t seconds", "--timeout seconds", "WHOIS request timeout") { |t| timeout = t.to_f }
+
+    parser.on("-I seconds", "--interval seconds", "min interval between WHOIS requests per server") { |i| interval = i.to_f }
+
+    parser.on("-i FILE", "--input FILE", "reads domains from FILE") { |f| fin = File.open(f) }
+
+    parser.invalid_option do |flag|
+      STDERR.puts "#{flag} is not a valid option."
+      STDERR.puts parser
+      exit(1)
+    end
+  end
 
   Colorize.enabled = false unless OUT_TTY
 
@@ -28,13 +57,13 @@ module DChecker
         tld2client[tld][:clients] << c
         c.add_input_channel(tld2client[tld][:channel])
       end
-      c.scan_loop(ochannel)
+      c.scan_loop(ochannel, timeout: timeout, interval: interval)
     end
   end
 
   domains = Array(Domain).new
 
-  FIN.each_line do |line|
+  fin.each_line do |line|
     line = line.strip
     domain = Domain.parse line
     next unless domain
