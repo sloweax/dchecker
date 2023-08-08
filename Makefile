@@ -6,7 +6,7 @@ NAME=dchecker
 all: bin/$(NAME)
 
 bin/$(NAME): src/*
-	shards build --production
+	shards build --release
 
 clean:
 	rm -rf bin/*
