@@ -1,0 +1,10 @@
+name: dchecker
+version: 0.1.0
+
+targets:
+  dchecker:
+    main: src/dchecker.cr
+
+crystal: 1.9.2
+
+license: MIT
