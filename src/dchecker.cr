@@ -1,17 +1,18 @@
 require "./whoisclient"
+require "./domain"
 require "colorize"
 
 module DChecker
-  VERSION = "0.1.0"
+  VERSION = "0.1.1"
 
   ochannel = Channel(DomainInfo).new
 
-  tld2client = Hash(String, NamedTuple(clients: Array(WHOISClient), channel: Channel(String))).new
+  tld2client = Hash(String, NamedTuple(clients: Array(WHOISClient), channel: Channel(Domain))).new
 
   [
     "com", "net", "cc", "cn", "gg", "ru"
   ].each do |tld|
-    tld2client[tld] = {clients: Array(WHOISClient).new, channel: Channel(String).new}
+    tld2client[tld] = {clients: Array(WHOISClient).new, channel: Channel(Domain).new}
   end
 
   WHOISClient.new("whois.verisign-grs.com", available_regex: /No match for/m).tap do |c|
@@ -29,29 +30,35 @@ module DChecker
     end
   end
 
-  ndomains = 0
+  domains = Array(Domain).new
+
   STDIN.each_line do |line|
     line = line.strip
-    next unless line.size > 0
-    tld = line.split('.')[-1]
-    next unless tld2client.has_key?(tld)
-    ndomains += 1
-    tld2client[tld][:channel].send line
+    domain = Domain.parse line
+    next unless domain
+    next unless tld2client.has_key? domain.tld
+    domains << domain
+  end
+
+  spawn do
+    domains.each do |domain|
+      tld2client[domain.tld][:channel].send domain
+    end
   end
 
   out_tty = STDOUT.tty?
-  ndomains.times do
-    d = ochannel.receive?
-    break unless d
+
+  domains.size.times do
+    d = ochannel.receive
 
     unless out_tty
-      puts d.domain if d.available
+      puts d.domain.root if d.available
       next
     end
 
     color = d.available ? :green : :yellow
     color = :red unless d.success
 
-    puts d.domain.colorize(color)
+    puts d.domain.root.colorize(color)
   end
 end

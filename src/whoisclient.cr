@@ -1,10 +1,11 @@
 require "socket"
+require "./domain"
 
 module DChecker
   struct DomainInfo
     property available, domain, success
 
-    def initialize(@domain : String | Nil, @available : Bool, @success : Bool)
+    def initialize(@domain : Domain, @available : Bool, @success : Bool)
     end
   end
   
@@ -17,9 +18,9 @@ module DChecker
     )
     end
 
-    def check(domain : String) : DomainInfo
+    def check(domain : Domain) : DomainInfo
       socket = TCPSocket.new(@host, @port, dns_timeout = 10, connect_timeout = 10)
-      query = @query_format.sub("%domain%", domain)
+      query = @query_format.sub("%domain%", domain.root)
       socket.print(query)
 
       response = socket.gets_to_end
@@ -31,12 +32,10 @@ module DChecker
       DomainInfo.new(domain, available, true)
     end
 
-    def bind(ichannel : Channel(String), ochannel : Channel(DomainInfo), interval : Float64 = 0.25)
+    def bind(ichannel : Channel(Domain), ochannel : Channel(DomainInfo), interval : Float64 = 0.25)
       spawn do
         loop do
-          domain = ichannel.receive?
-
-          break if domain.nil?
+          domain = ichannel.receive
 
           spawn do
             begin
