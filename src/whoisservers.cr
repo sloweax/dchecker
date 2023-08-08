@@ -1,6 +1,7 @@
 module DChecker
   SERVERS = {
     "whois.verisign-grs.com" => {["com", "net"], /^No match for/m},
+    "whois.opensrs.net" => {["com", "net"], /^Can't get information on non-local domain/m},
     "ccwhois.verisign-grs.com" => {["cc"], /^No match for/m},
     "whois.cnnic.cn" => {["cn"], /^No matching record/m},
     "whois.gg" => {["gg"], /^NOT FOUND/m},
