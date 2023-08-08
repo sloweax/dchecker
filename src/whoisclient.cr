@@ -12,10 +12,12 @@ module DChecker
 
   class WHOISClient
     def initialize (
-      @host : String, @port : Int32 = 43,
+      @host : String,
+      @port : Int32 = 43,
       @query_format : String = "%domain%\n",
-      @available_regex : Regex = /^NOT FOUND/im
+      @available_regex : Regex = /^NOT FOUND/im,
     )
+      @channel = Channel(Domain).new
     end
 
     def check(domain : Domain) : DomainInfo
@@ -32,10 +34,10 @@ module DChecker
       DomainInfo.new(domain, available, true)
     end
 
-    def bind(ichannel : Channel(Domain), ochannel : Channel(DomainInfo), interval : Float64 = 0.25)
+    def scan_loop(ochannel : Channel(DomainInfo), interval : Float64 = 0.25)
       spawn do
         loop do
-          domain = ichannel.receive
+          domain = @channel.receive
 
           spawn do
             begin
@@ -48,6 +50,15 @@ module DChecker
           end
 
           sleep interval
+        end
+      end
+    end
+
+    def add_input_channel(channel : Channel(Domain))
+      spawn do
+        loop do
+          domain = channel.receive
+          @channel.send domain
         end
       end
     end

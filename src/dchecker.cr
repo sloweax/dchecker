@@ -1,38 +1,40 @@
 require "./whoisclient"
 require "./domain"
+require "./whoisservers"
 require "colorize"
 
 module DChecker
   VERSION = "0.1.1"
 
+  FIN = STDIN
+  FOUT = STDOUT
+  OUT_TTY = FOUT.tty?
+
+  Colorize.enabled = false unless OUT_TTY
+
   ochannel = Channel(DomainInfo).new
 
   tld2client = Hash(String, NamedTuple(clients: Array(WHOISClient), channel: Channel(Domain))).new
 
-  [
-    "com", "net", "cc", "cn", "gg", "ru"
-  ].each do |tld|
-    tld2client[tld] = {clients: Array(WHOISClient).new, channel: Channel(Domain).new}
-  end
+  SERVERS.each do |(server, data)|
+    tlds, regex = data
 
-  WHOISClient.new("whois.verisign-grs.com", available_regex: /No match for/m).tap do |c|
-    tld2client["com"][:clients] << c
-    tld2client["net"][:clients] << c
-  end
-  tld2client["cc"][:clients] << WHOISClient.new("ccwhois.verisign-grs.com", available_regex: /No match for/m)
-  tld2client["cn"][:clients] << WHOISClient.new("whois.cnnic.cn", available_regex: /^No matching record/m)
-  tld2client["gg"][:clients] << WHOISClient.new("whois.gg", available_regex: /^NOT FOUND/m)
-  tld2client["ru"][:clients] << WHOISClient.new("whois.tcinet.ru", available_regex: /^No entries found/m)
+    tlds.each do |tld|
+      tld2client[tld] = {clients: Array(WHOISClient).new, channel: Channel(Domain).new} unless tld2client.has_key? tld
+    end
 
-  tld2client.each_value do |h|
-    h[:clients].each do |c|
-      c.bind(h[:channel], ochannel)
+    WHOISClient.new(server, available_regex: regex).tap do |c|
+      tlds.each do |tld|
+        tld2client[tld][:clients] << c
+        c.add_input_channel(tld2client[tld][:channel])
+      end
+      c.scan_loop(ochannel)
     end
   end
 
   domains = Array(Domain).new
 
-  STDIN.each_line do |line|
+  FIN.each_line do |line|
     line = line.strip
     domain = Domain.parse line
     next unless domain
@@ -46,19 +48,18 @@ module DChecker
     end
   end
 
-  out_tty = STDOUT.tty?
-
   domains.size.times do
     d = ochannel.receive
 
-    unless out_tty
-      puts d.domain.root if d.available
+    unless d.success
+      STDERR.puts d.domain.root.colorize(:red)
       next
     end
 
-    color = d.available ? :green : :yellow
-    color = :red unless d.success
-
-    puts d.domain.root.colorize(color)
+    if d.available
+      FOUT.puts d.domain.root.colorize(:green)
+    elsif OUT_TTY
+      FOUT.puts d.domain.root.colorize(:yellow)
+    end
   end
 end
