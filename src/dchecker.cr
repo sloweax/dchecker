@@ -12,12 +12,20 @@ module DChecker
   interval = 0.5
   FOUT = STDOUT
   OUT_TTY = FOUT.tty?
+  dynamic_server = Array(String).new
+  dynamic_available_regex = Array(Regex).new
+  dynamic_tlds = Array(Array(String)).new
 
   OptionParser.parse do |parser|
     parser.banner = "usage: #{PROGRAM_NAME} [options]"
 
     parser.on("-h", "--help", "usage helper") {
       puts parser
+      puts "examples:"
+      puts "    add WHOIS server for .example tld:"
+      puts "        #{PROGRAM_NAME} -S whois.example -T example -R 'Found domain'"
+      puts "    add multiple WHOIS servers (the second will listen for .ab and .com.ab tlds):"
+      puts "        #{PROGRAM_NAME} -S whois.example -T example -R 'Found domain' -S whois.com.ab -T com.ab -T ab -R '^NOT FOUND'"
       exit
     }
 
@@ -32,11 +40,29 @@ module DChecker
 
     parser.on("-i FILE", "--input FILE", "reads domains from FILE") { |f| fin = File.open(f) }
 
+    parser.on("-S server", "add WHOIS server (needs -T and -R)") { |s| dynamic_server << s }
+
+    parser.on("-T tld", "add tld to WHOIS server") { |t|
+      dynamic_tlds << Array(String).new if dynamic_server.size - 1 == dynamic_tlds.size
+      dynamic_tlds[dynamic_server.size - 1] << t
+    }
+
+    parser.on("-R regex", "if the WHOIS server response matches with regex, mark it as an available domain") { |r| dynamic_available_regex << Regex.new(r, Regex::Options::MULTILINE) }
+
     parser.invalid_option do |flag|
       STDERR.puts "#{flag} is not a valid option."
       STDERR.puts parser
       exit(1)
     end
+  end
+
+  begin
+    dynamic_server.zip(dynamic_tlds, dynamic_available_regex).each do |h, t, r|
+      SERVERS[h] = {t, r}
+    end
+  rescue
+    STDERR.puts "could not add WHOIS server"
+    exit(1)
   end
 
   Colorize.enabled = false unless OUT_TTY

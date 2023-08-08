@@ -8,7 +8,6 @@ module DChecker
     def initialize(@domain : Domain, @available : Bool, @success : Bool)
     end
   end
-  
 
   class WHOISClient
     def initialize (
