@@ -1,6 +1,6 @@
 require "./whoisclient"
 require "./domain"
-require "./domaininfo"
+require "./whoisresponse"
 require "./whoisservers"
 require "option_parser"
 require "colorize"
@@ -97,7 +97,7 @@ module DChecker
 
   Colorize.enabled = false unless OUT_TTY
 
-  ochannel = Channel(DomainInfo).new
+  ochannel = Channel(WHOISResponse).new
 
   tld2client = Hash(String, NamedTuple(clients: Array(WHOISClient), channel: Channel(Domain))).new
 

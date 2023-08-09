@@ -1,6 +1,6 @@
 require "socket"
 require "./domain"
-require "./domaininfo"
+require "./whoisresponse"
 
 module DChecker
   class WHOISClient
@@ -13,7 +13,7 @@ module DChecker
       @channel = Channel(Domain).new
     end
 
-    def check(domain : Domain, timeout : Float64 = 10) : DomainInfo
+    def check(domain : Domain, timeout : Float64 = 10) : WHOISResponse
       socket = TCPSocket.new(@host, @port, dns_timeout = timeout, connect_timeout = timeout)
       query = @query_format.sub("%domain%", domain.root)
       socket.print(query)
@@ -24,10 +24,10 @@ module DChecker
 
       available = !(response =~ @available_regex).nil?
 
-      DomainInfo.new(domain, available, true, @host)
+      WHOISResponse.new(domain, @host, success: true, available: available)
     end
 
-    def scan_loop(ochannel : Channel(DomainInfo), interval : Float64 = 0.25, timeout : Float64 = 10)
+    def scan_loop(ochannel : Channel(WHOISResponse), interval : Float64 = 0.25, timeout : Float64 = 10)
       spawn do
         loop do
           domain = @channel.receive
@@ -36,7 +36,7 @@ module DChecker
             begin
               dinfo = check(domain, timeout)
             rescue
-              dinfo = DomainInfo.new(domain, false, false, @host)
+              dinfo = WHOISResponse.new(domain, @host, success: false)
             end
 
             ochannel.send dinfo
