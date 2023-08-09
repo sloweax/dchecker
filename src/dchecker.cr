@@ -99,19 +99,19 @@ module DChecker
 
   ochannel = Channel(WHOISResponse).new
 
-  tld2client = Hash(String, NamedTuple(clients: Array(WHOISClient), channel: Channel(Domain))).new
+  tldhash = Hash(String, NamedTuple(clients: Array(WHOISClient), channel: Channel(Domain))).new
 
   SERVERS.each do |(server, data)|
     tlds, regex, query = data
 
     tlds.each do |tld|
-      tld2client[tld] = {clients: Array(WHOISClient).new, channel: Channel(Domain).new} unless tld2client.has_key? tld
+      tldhash[tld] = {clients: Array(WHOISClient).new, channel: Channel(Domain).new} unless tldhash.has_key? tld
     end
 
     WHOISClient.new(server, available_regex: regex, query_format: query).tap do |c|
       tlds.each do |tld|
-        tld2client[tld][:clients] << c
-        c.add_input_channel(tld2client[tld][:channel])
+        tldhash[tld][:clients] << c
+        c.add_input_channel(tldhash[tld][:channel])
       end
       c.scan_loop(ochannel, timeout: timeout, interval: interval)
     end
@@ -123,13 +123,13 @@ module DChecker
     line = line.strip
     domain = Domain.parse line
     next unless domain
-    next unless tld2client.has_key? domain.tld
+    next unless tldhash.has_key? domain.tld
     domains << domain
   end
 
   spawn do
     domains.each do |domain|
-      tld2client[domain.tld][:channel].send domain
+      tldhash[domain.tld][:channel].send domain
     end
   end
 
