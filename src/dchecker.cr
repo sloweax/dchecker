@@ -1,5 +1,6 @@
 require "./whoisclient"
 require "./domain"
+require "./domaininfo"
 require "./whoisservers"
 require "option_parser"
 require "colorize"
