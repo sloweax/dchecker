@@ -55,6 +55,15 @@ module DChecker
 
     parser.on("-Q query", "changes WHOIS query format (default: \"%domain%\\n\")") { |q| dynamic_query[dynamic_server.size - 1] = q }
 
+    parser.on("-X", "clear all pre-configured WHOIS servers") { SERVERS.clear }
+
+    parser.on("-D tld", "removes pre-configured WHOIS servers for specified tld") { |t|
+      SERVERS.each do |k, v|
+        tlds, regex, query = v
+        SERVERS[k][0].delete t
+      end
+    }
+
     parser.invalid_option do |flag|
       STDERR.puts "#{flag} is not a valid option."
       STDERR.puts parser
