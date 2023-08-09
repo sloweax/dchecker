@@ -72,6 +72,12 @@ module DChecker
       STDERR.puts parser
       exit(1)
     end
+
+    parser.missing_option do |flag|
+      STDERR.puts "#{flag} is missing a value."
+      STDERR.puts parser
+      exit(1)
+    end
   end
 
   begin
