@@ -53,7 +53,10 @@ module DChecker
 
     parser.on("-R regex", "if the WHOIS server response matches with regex, mark it as an available domain") { |r| dynamic_available_regex << Regex.new(r, Regex::Options::MULTILINE) }
 
-    parser.on("-Q query", "changes WHOIS query format (default: \"%domain%\\n\")") { |q| dynamic_query[dynamic_server.size - 1] = q }
+    parser.on("-Q query", "changes WHOIS query format (default: \"%domain%\\n\")") { |q|
+      q = q.sub("\\n", "\n")
+      dynamic_query[dynamic_server.size - 1] = q
+    }
 
     parser.on("-X", "clear all pre-configured WHOIS servers") { SERVERS.clear }
 
