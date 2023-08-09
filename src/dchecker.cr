@@ -136,7 +136,7 @@ module DChecker
     d = ochannel.receive
 
     unless d.success
-      STDERR.puts d.domain.root.colorize(:red)
+      STDERR.puts "#{d.domain.root.colorize(:red)}\t#{d.whois_server}"
       next
     end
 

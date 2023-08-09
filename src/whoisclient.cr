@@ -3,9 +3,9 @@ require "./domain"
 
 module DChecker
   struct DomainInfo
-    property available, domain, success
+    property available, domain, success, whois_server
 
-    def initialize(@domain : Domain, @available : Bool, @success : Bool)
+    def initialize(@domain : Domain, @available : Bool, @success : Bool, @whois_server : String)
     end
   end
 
@@ -30,7 +30,7 @@ module DChecker
 
       available = !(response =~ @available_regex).nil?
 
-      DomainInfo.new(domain, available, true)
+      DomainInfo.new(domain, available, true, @host)
     end
 
     def scan_loop(ochannel : Channel(DomainInfo), interval : Float64 = 0.25, timeout : Float64 = 10)
@@ -42,7 +42,7 @@ module DChecker
             begin
               dinfo = check(domain, timeout)
             rescue
-              dinfo = DomainInfo.new(domain, false, false)
+              dinfo = DomainInfo.new(domain, false, false, @host)
             end
 
             ochannel.send dinfo
