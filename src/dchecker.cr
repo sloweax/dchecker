@@ -1,7 +1,6 @@
 require "./whoisclient"
 require "./domain"
 require "./whoisservers"
-# require "errno"
 require "option_parser"
 require "colorize"
 
